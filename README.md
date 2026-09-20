@@ -10,3 +10,11 @@ Generic 'chat with your PDF' applications suffer from blind hallucinations, cont
 
 Aegis eliminates these vulnerabilities through structure-aware ingestion, grounded generation, and autonomous self-correction.
 
+## Architecture
+
+```mermaid
+flowchart TD
+    User --> APIGW[Amazon API Gateway / FastAPI]
+    APIGW --> S3Raw[Amazon S3: Raw Sources]
+```
+
