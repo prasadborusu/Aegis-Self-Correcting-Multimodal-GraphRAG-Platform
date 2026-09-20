@@ -49,3 +49,8 @@ Deploy using AWS SAM (Serverless Application Model).
 
 IAM least privilege, encrypted S3 buckets, zero hardcoded credentials.
 
+## Hackathon Submission
+
+Target Category: #commercial-potential
+Target Lane: #startup
+
