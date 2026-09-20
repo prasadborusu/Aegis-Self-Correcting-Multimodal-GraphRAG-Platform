@@ -18,3 +18,10 @@ class Chunk(BaseModel):
     document_id: str
     text: str
     metadata: ChunkMetadata
+
+class DocumentRecord(BaseModel):
+    document_id: str
+    filename: str
+    file_type: str
+    size_bytes: int
+    status: ProcessingState = ProcessingState.UPLOADED
