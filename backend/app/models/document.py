@@ -25,3 +25,10 @@ class DocumentRecord(BaseModel):
     file_type: str
     size_bytes: int
     status: ProcessingState = ProcessingState.UPLOADED
+
+class Citation(BaseModel):
+    document_id: str
+    filename: str
+    chunk_id: str
+    excerpt: str
+    relevance_score: float
