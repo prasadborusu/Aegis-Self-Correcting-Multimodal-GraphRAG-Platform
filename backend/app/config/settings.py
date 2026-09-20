@@ -13,3 +13,6 @@ class Settings(BaseSettings):
     bedrock_generation_region: str = 'us-west-2'
     bedrock_embedding_model_id: str = 'amazon.titan-embed-text-v2:0'
     bedrock_generation_model_id: str = 'amazon.nova-lite-v1:0'
+    opensearch_endpoint: str = ''
+    opensearch_index: str = 'aegis-knowledge-index'
+    opensearch_vector_dimension: int = 1024
