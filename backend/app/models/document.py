@@ -6,3 +6,9 @@ class ProcessingState(str, Enum):
     PROCESSING = 'PROCESSING'
     COMPLETED = 'COMPLETED'
     FAILED = 'FAILED'
+
+class ChunkMetadata(BaseModel):
+    document_id: str
+    filename: str
+    page: int = 1
+    chunk_index: int = 0
