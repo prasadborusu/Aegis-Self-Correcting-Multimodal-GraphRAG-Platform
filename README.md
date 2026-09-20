@@ -45,3 +45,7 @@ Instructions for setting up Node.js, Python, and AWS CLI.
 
 Deploy using AWS SAM (Serverless Application Model).
 
+## Security
+
+IAM least privilege, encrypted S3 buckets, zero hardcoded credentials.
+
