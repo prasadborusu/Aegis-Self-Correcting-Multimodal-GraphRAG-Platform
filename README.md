@@ -33,3 +33,7 @@ flowchart TD
 4. Retrieval & Reranking
 5. Generation & Verification
 
+## Self-Correction Loop
+
+When evidence sufficiency drops below threshold, Aegis reformulates the query and performs secondary retrieval up to 3 times.
+
