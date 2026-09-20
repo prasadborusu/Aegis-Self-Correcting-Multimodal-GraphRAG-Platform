@@ -6,3 +6,7 @@
 
 Generic 'chat with your PDF' applications suffer from blind hallucinations, context fragmentation, and unverified citations.
 
+## Solution
+
+Aegis eliminates these vulnerabilities through structure-aware ingestion, grounded generation, and autonomous self-correction.
+
