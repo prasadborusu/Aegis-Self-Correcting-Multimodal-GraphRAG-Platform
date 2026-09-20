@@ -13,3 +13,11 @@ dist/
 .pytest_cache/
 venv/
 .venv/
+
+# Node & Frontend
+node_modules/
+frontend/dist/
+.npm
+
+# AWS
+.aws-sam/
