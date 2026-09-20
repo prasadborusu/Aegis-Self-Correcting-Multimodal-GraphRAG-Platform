@@ -12,3 +12,9 @@ class ChunkMetadata(BaseModel):
     filename: str
     page: int = 1
     chunk_index: int = 0
+
+class Chunk(BaseModel):
+    chunk_id: str
+    document_id: str
+    text: str
+    metadata: ChunkMetadata
