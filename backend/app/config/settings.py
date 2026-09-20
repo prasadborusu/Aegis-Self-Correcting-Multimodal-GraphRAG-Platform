@@ -16,3 +16,9 @@ class Settings(BaseSettings):
     opensearch_endpoint: str = ''
     opensearch_index: str = 'aegis-knowledge-index'
     opensearch_vector_dimension: int = 1024
+    chunk_size: int = 800
+    chunk_overlap: int = 150
+    retrieval_top_k: int = 20
+    reranking_top_k: int = 8
+    grounding_threshold: float = 0.75
+    max_self_correction_attempts: int = 3
