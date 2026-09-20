@@ -37,3 +37,7 @@ flowchart TD
 
 When evidence sufficiency drops below threshold, Aegis reformulates the query and performs secondary retrieval up to 3 times.
 
+## Local Development
+
+Instructions for setting up Node.js, Python, and AWS CLI.
+
