@@ -18,3 +18,10 @@ flowchart TD
     APIGW --> S3Raw[Amazon S3: Raw Sources]
 ```
 
+## AWS Services
+
+- Amazon Bedrock: Titan Text Embeddings & Nova Lite
+- Amazon OpenSearch Serverless: Vector search
+- Amazon S3: Raw and processed artifacts
+- Amazon DynamoDB: Metadata state store
+
