@@ -4,3 +4,12 @@
 *.pem
 *.key
 .storage/
+
+# Python
+__pycache__/
+*.py[cod]
+build/
+dist/
+.pytest_cache/
+venv/
+.venv/
