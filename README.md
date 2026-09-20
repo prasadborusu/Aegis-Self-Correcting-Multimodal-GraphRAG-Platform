@@ -25,3 +25,11 @@ flowchart TD
 - Amazon S3: Raw and processed artifacts
 - Amazon DynamoDB: Metadata state store
 
+## RAG Pipeline
+
+1. Ingestion & Normalization
+2. Structure-Aware Chunking
+3. Vector Indexing
+4. Retrieval & Reranking
+5. Generation & Verification
+
