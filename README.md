@@ -41,3 +41,7 @@ When evidence sufficiency drops below threshold, Aegis reformulates the query an
 
 Instructions for setting up Node.js, Python, and AWS CLI.
 
+## AWS Deployment
+
+Deploy using AWS SAM (Serverless Application Model).
+
