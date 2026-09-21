@@ -1,0 +1,196 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Aegis - Self-Correcting Multimodal GraphRAG Platform
+  Production-oriented AWS serverless infrastructure for knowledge intelligence.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Deployment target environment
+
+  BedrockRegion:
+    Type: String
+    Default: ap-south-1
+    Description: AWS region where Bedrock foundation models are hosted
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 1024
+    Runtime: python3.13
+    Tracing: Active
+    Environment:
+      Variables:
+        APP_ENV: !Ref Environment
+        AWS_REGION_NAME: !Ref AWS::Region
+        LOG_LEVEL: INFO
+
+Resources:
+  # ============================================================================
+  # S3 Storage
+  # ============================================================================
+  AegisDocumentsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub aegis-documents-${Environment}-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, POST, HEAD]
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  AegisArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub aegis-artifacts-${Environment}-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # ============================================================================
+  # DynamoDB Tables
+  # ============================================================================
+  AegisDocumentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub aegis_documents_${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: document_id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: uploaded_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: document_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: StatusIndex
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: uploaded_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+
+  AegisConversationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub aegis_conversations_${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: conversation_id
+          AttributeType: S
+        - AttributeName: message_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: conversation_id
+          KeyType: HASH
+        - AttributeName: message_id
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+
+  AegisEvaluationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub aegis_evaluations_${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: query_id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: query_id
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+
+  # ============================================================================
+  # API Backend Lambda Function
+  # ============================================================================
+  AegisBackendFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend
+      Handler: app.main.handler
+      Description: Aegis FastAPI Backend API Handler
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref AegisDocumentsBucket
+        - S3CrudPolicy:
+            BucketName: !Ref AegisArtifactsBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AegisDocumentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AegisConversationsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AegisEvaluationsTable
+        - Statement:
+            - Sid: BedrockInvokePolicy
+              Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource: '*'
+      Environment:
+        Variables:
+          S3_BUCKET_DOCUMENTS: !Ref AegisDocumentsBucket
+          S3_BUCKET_PROCESSED: !Ref AegisArtifactsBucket
+          DYNAMODB_DOCUMENTS_TABLE: !Ref AegisDocumentsTable
+          DYNAMODB_CONVERSATIONS_TABLE: !Ref AegisConversationsTable
+          DYNAMODB_EVALUATIONS_TABLE: !Ref AegisEvaluationsTable
+          BEDROCK_REGION: !Ref BedrockRegion
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+Outputs:
+  DocumentsBucketName:
+    Description: S3 Bucket for Raw Documents
+    Value: !Ref AegisDocumentsBucket
+
+  ArtifactsBucketName:
+    Description: S3 Bucket for Processed Artifacts
+    Value: !Ref AegisArtifactsBucket
+
+  DocumentsTableName:
+    Description: DynamoDB Table for Documents Metadata
+    Value: !Ref AegisDocumentsTable
+
+  ConversationsTableName:
+    Description: DynamoDB Table for Conversations
+    Value: !Ref AegisConversationsTable
+
+  EvaluationsTableName:
+    Description: DynamoDB Table for Evaluations
+    Value: !Ref AegisEvaluationsTable
