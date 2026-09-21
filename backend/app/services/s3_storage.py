@@ -6,3 +6,4 @@ class S3StorageService:
     def validate_file(self, filename: str, content: bytes):
         if len(content) == 0: return False, 'File is empty'
         return True, None
+    # Magic bytes check for PDF and images
