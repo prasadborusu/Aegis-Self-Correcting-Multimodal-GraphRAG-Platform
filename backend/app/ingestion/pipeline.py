@@ -1,0 +1,2 @@
+class IngestionPipeline:
+    pass
