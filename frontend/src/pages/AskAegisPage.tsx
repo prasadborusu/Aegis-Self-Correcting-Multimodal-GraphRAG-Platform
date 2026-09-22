@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Send,
   Shield,
@@ -8,9 +8,10 @@ import {
   Sparkles,
   X,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { Citation, ClaimVerification, RetrievalTrace } from '../types';
-import { sendQuery } from '../services/api';
+import { sendQuery, fetchConversationHistory, clearConversationHistory } from '../services/api';
 
 interface Message {
   id: string;
@@ -23,20 +24,53 @@ interface Message {
   trace?: RetrievalTrace;
 }
 
+const DEFAULT_WELCOME: Message = {
+  id: 'welcome',
+  role: 'assistant',
+  content:
+    'Welcome to Aegis. I am an evidence-first knowledge engine powered by Amazon Bedrock and OpenSearch. Ask any question against your uploaded sources. Every statement is verified for factual grounding against extracted document evidence before being presented.',
+  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+};
+
 export const AskAegisPage: React.FC = () => {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content:
-        'Welcome to Aegis. I am an evidence-first knowledge engine powered by Amazon Bedrock and OpenSearch. Ask any question against your uploaded sources. Every statement is verified for factual grounding against extracted document evidence before being presented.',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([DEFAULT_WELCOME]);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
   const [activeTrace, setActiveTrace] = useState<RetrievalTrace | null>(null);
+
+  // Load persistent chat history from local storage folder on mount
+  useEffect(() => {
+    async function loadSavedChat() {
+      try {
+        const history = await fetchConversationHistory();
+        if (history && history.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mapped: Message[] = history.map((item: any) => ({
+            id: item.message_id,
+            role: item.role,
+            content: item.content,
+            timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            citations: item.citations,
+            groundingCoverage: item.grounding_coverage,
+            claims: item.claims,
+            trace: item.trace,
+          }));
+          setMessages([DEFAULT_WELCOME, ...mapped]);
+        }
+      } catch (err) {
+        console.error('Failed to load local chat history:', err);
+      }
+    }
+    loadSavedChat();
+  }, []);
+
+  const handleClearHistory = async () => {
+    if (window.confirm('Clear saved conversation history from local storage?')) {
+      await clearConversationHistory();
+      setMessages([DEFAULT_WELCOME]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,11 +117,24 @@ export const AskAegisPage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Ask Aegis</h1>
-        <p className="text-xs sm:text-sm text-slate-500">
-          Query your knowledge base with verifiable claim-level grounding and automatic self-correcting retrieval.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Ask Aegis</h1>
+          <p className="text-xs sm:text-sm text-slate-500">
+            Query your knowledge base with verifiable claim-level grounding and automatic self-correcting retrieval.
+          </p>
+        </div>
+        {messages.length > 1 && (
+          <button
+            type="button"
+            onClick={handleClearHistory}
+            className="text-xs text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 bg-white px-3 py-1.5 rounded-lg flex items-center space-x-1.5 shadow-2xs transition-colors cursor-pointer"
+            title="Clear saved conversation history from local storage"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Clear History</span>
+          </button>
+        )}
       </div>
 
       {/* Main Chat Stream */}

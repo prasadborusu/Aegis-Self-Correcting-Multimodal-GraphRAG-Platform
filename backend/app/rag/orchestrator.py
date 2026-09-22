@@ -73,13 +73,30 @@ class RAGOrchestrator:
             "hi", "hello", "hey", "greetings", "good morning", "good afternoon",
             "good evening", "howdy", "hola", "hi aegis", "hello aegis", "hey aegis"
         }
-        meta_intents = {
-            "who are you", "what are you", "what can you do", "help",
-            "what is this", "what is aegis", "how does aegis work", "how do you work"
-        }
+        meta_phrases = [
+            "who are you", "what are you", "what can you do", "what is aegis",
+            "how does aegis work", "tell me about aegis", "how do you work",
+            "what can i ask", "help"
+        ]
 
-        if normalized_q in greetings:
-            doc_count = len(list(self.retriever.pipeline.chunks_storage_dir.glob("*.json")))
+        is_greeting = normalized_q in greetings or any(normalized_q == g or normalized_q.startswith(g + " ") for g in greetings)
+        is_meta = any(phrase in normalized_q for phrase in meta_phrases)
+
+        # Retrieve list of indexed sample filenames
+        chunk_files = list(self.retriever.pipeline.chunks_storage_dir.glob("*.json"))
+        doc_count = len(chunk_files)
+        sample_filenames = []
+        for cf in chunk_files:
+            try:
+                chunks = self.retriever.pipeline.get_chunks_for_document(cf.stem)
+                if chunks and chunks[0].metadata.filename:
+                    fname = chunks[0].metadata.filename
+                    if fname not in sample_filenames and fname != "test_doc.txt":
+                        sample_filenames.append(fname)
+            except Exception:
+                pass
+
+        if is_greeting and not is_meta:
             doc_status = f" You currently have {doc_count} document(s) in your knowledge base." if doc_count > 0 else " No documents uploaded yet."
             greeting_text = (
                 f"Hello! I am Aegis, your evidence-first knowledge intelligence platform.{doc_status}\n\n"
@@ -110,16 +127,19 @@ class RAGOrchestrator:
                 },
             )
 
-        if normalized_q in meta_intents:
-            doc_count = len(list(self.retriever.pipeline.chunks_storage_dir.glob("*.json")))
+        if is_meta:
+            doc_summary_text = (
+                f"e.g. {', '.join(sample_filenames[:3])}" if sample_filenames else f"{doc_count} documents"
+            )
             system_overview = (
-                "Aegis is an enterprise evidence-grounded knowledge intelligence platform built on AWS.\n\n"
-                "Core Architecture & Features:\n"
-                "1. Structure-Aware Parsing: Preserves headings, layout, and page boundaries (PDF, TXT, images).\n"
-                "2. Bedrock Titan v2 & Hybrid Vector Retrieval: High-precision semantic and lexical search.\n"
-                "3. Self-Correcting Execution: Evaluates factual claims against retrieved evidence; autonomously re-retrieves if support is insufficient.\n"
-                "4. Verifiable Citations: Every statement is linked to exact document chunk IDs and page numbers.\n\n"
-                f"Knowledge Base Status: {doc_count} active document(s) indexed. Try asking: 'What does Section 1 Data Verification state about claims?'"
+                "I am Aegis, an enterprise evidence-grounded knowledge intelligence platform built for AWS.\n\n"
+                "Here is what I can do:\n"
+                "1. Multimodal Document Ingestion: Extracts and parses text, layout, and tables from PDFs, text files, and images (using Amazon Textract OCR).\n"
+                "2. Hybrid Semantic Retrieval: Combines dense vector search (Amazon Bedrock Titan Embeddings v2) with lexical BM25 keyword matching.\n"
+                "3. Claim-Level Grounding Verification: Evaluates factual statements against retrieved excerpts before returning an answer, ensuring zero hallucinations.\n"
+                "4. Autonomous Self-Correction: Automatically rewrites queries and re-retrieves if factual support is incomplete (<75% coverage).\n"
+                "5. Verifiable Evidence Citations: Links every claim to exact document names, chunk IDs, and page numbers.\n\n"
+                f"Active Knowledge Base: {doc_count} document(s) currently indexed ({doc_summary_text}). Ask me any question about your documents!"
             )
             return QueryResponse(
                 query_id=query_id,

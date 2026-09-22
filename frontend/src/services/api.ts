@@ -123,3 +123,27 @@ export async function sendQuery(query: string, documentIds?: string[]) {
 
   return await res.json();
 }
+
+export async function fetchConversationHistory(sessionId: string = 'default') {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/conversations?session_id=${encodeURIComponent(sessionId)}`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // fallback
+  }
+  return [];
+}
+
+export async function clearConversationHistory(sessionId: string = 'default'): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/conversations?session_id=${encodeURIComponent(sessionId)}`, {
+      method: 'DELETE',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
