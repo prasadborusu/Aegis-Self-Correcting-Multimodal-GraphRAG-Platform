@@ -71,54 +71,62 @@ flowchart TD
 
 Aegis implements an evidence-first, mathematically auditable pipeline:
 
-$$\text{Document} \longrightarrow \text{Structure-Aware Extraction} \longrightarrow \text{Provenance Chunking} \longrightarrow \text{Titan v2 Embeddings} \longrightarrow \text{Hybrid Retrieval} \longrightarrow \text{Claim Verification} \longrightarrow \text{Self-Correction} \longrightarrow \text{Traceability}$$
+![Aegis Architecture Pipeline](./equations/pipeline.png)
 
 ### 1. Structure-Aware Document Extraction
 - **Implementation**: [`backend/app/extraction/pdf_extractor.py`](../backend/app/extraction/pdf_extractor.py)
 - **Algorithmic Approach**: Standard PDF extractors dump linear character streams, separating headers from content and breaking tables. Aegis uses PyMuPDF (`fitz`) layout analysis to extract page blocks while recording:
-  - Font size and line weights to identify heading levels ($H_1, H_2, H_3$).
+  - Font size and line weights to identify heading levels (H1, H2, H3).
   - Tabular delimiters and multi-column offsets.
-  - Precise page indices ($p \in [1, P]$).
+  - Precise page indices (page numbers 1 to P).
 
 ### 2. Provenance-Preserving Chunking Formulation
 - **Implementation**: [`backend/app/chunking/structure_aware.py`](../backend/app/chunking/structure_aware.py)
-- **Algorithmic Formulation**: Text is partitioned along structural boundaries (headings, paragraphs, tables) rather than naive fixed token lengths. Each chunk $c$ is assigned a deterministic hash ID and immutable metadata provenance:
-  $$c_{\text{id}} = \text{UUID}(d_{\text{id}} \parallel p \parallel \text{index})$$
-  $$\text{Metadata}(c) = \{ \text{doc\_id}: d_{\text{id}}, \text{filename}: F, \text{page}: p, \text{section}: S, \text{chunk\_id}: c_{\text{id}} \}$$
+- **Algorithmic Formulation**: Text is partitioned along structural boundaries (headings, paragraphs, tables) rather than naive fixed token lengths. Each chunk is assigned a deterministic hash ID and immutable metadata provenance:
+
+  ![Provenance Formulation](./equations/chunk_provenance.png)
 
 ### 3. High-Dimensional Vector Embeddings
 - **Implementation**: [`backend/app/embeddings/bedrock_embeddings.py`](../backend/app/embeddings/bedrock_embeddings.py)
 - **Model**: Amazon Bedrock Titan Text Embeddings v2 (`amazon.titan-embed-text-v2:0`).
-- **Vector Dimensionality**: $d = 1024$.
-- **Normalization**: L2 normalized unit vectors ($\|\mathbf{v}\|_2 = 1$), enabling ultra-low-latency cosine similarity:
-  $$\cos(\mathbf{v}_q, \mathbf{v}_c) = \mathbf{v}_q \cdot \mathbf{v}_c$$
+- **Vector Dimensionality**: d = 1024.
+- **Normalization**: L2 normalized unit vectors, enabling ultra-low-latency cosine similarity:
+
+  ![Cosine Similarity Formulation](./equations/cosine_similarity.png)
 
 ### 4. Hybrid Retrieval Scoring Function
 - **Implementation**: [`backend/app/retrieval/hybrid.py`](../backend/app/retrieval/hybrid.py) & [`backend/app/retrieval/vector_search.py`](../backend/app/retrieval/vector_search.py)
 - **Mathematical Scoring**: Fuses semantic vector proximity with BM25 inverted lexical frequency to guarantee that both abstract conceptual queries and exact identifiers (student IDs, course numbers, codes) are retrieved:
-  $$\text{Score}(c, q) = \alpha \cdot \cos(\mathbf{v}_q, \mathbf{v}_c) + (1 - \alpha) \cdot \text{BM25}(c, q)$$
-  *(where $\alpha = 0.70$ prioritizes semantic nuance while anchoring exact keywords).*
+
+  ![Hybrid Retrieval Scoring Formulation](./equations/hybrid_scoring.png)
+
+  *(where alpha = 0.70 prioritizes semantic nuance while anchoring exact keywords).*
 
 ### 5. Atomic Claim Decomposition & Mathematical Grounding Audit
 - **Implementation**: [`backend/app/evaluation/grounding.py`](../backend/app/evaluation/grounding.py)
 - **Algorithmic Formulation**:
-  1. Draft answer $A$ is parsed into $N$ atomic factual assertions: $A = \{c_1, c_2, \dots, c_N\}$.
-  2. Each claim $c_i$ is evaluated against retrieved evidence chunks $\mathcal{E} = \{e_1, e_2, \dots, e_k\}$ for lexical overlap and semantic entailment:
-     $$\text{Confidence}(c_i \mid \mathcal{E}) = \max_{e \in \mathcal{E}} \left[ \frac{|\text{Tokens}(c_i) \cap \text{Tokens}(e)|}{|\text{Tokens}(c_i)|} \right]$$
-  3. A claim is certified grounded if $\text{Confidence}(c_i \mid \mathcal{E}) \ge 0.40$.
-  4. Overall Grounding Coverage $G(A, \mathcal{E})$ is calculated as:
-     $$G(A, \mathcal{E}) = \frac{1}{N} \sum_{i=1}^N \mathbb{I}(\text{Confidence}(c_i \mid \mathcal{E}) \ge 0.40)$$
+  1. Draft answer is parsed into N atomic factual assertions.
+  2. Each claim is evaluated against retrieved evidence chunks for lexical overlap and semantic entailment:
+
+     ![Claim Confidence Formulation](./equations/claim_confidence.png)
+
+  3. A claim is certified grounded if confidence score >= 0.40.
+  4. Overall Grounding Coverage is calculated as:
+
+     ![Grounding Coverage Formulation](./equations/grounding_coverage.png)
 
 ### 6. Closed-Loop Self-Correction State Machine (Hero Feature)
 - **Implementation**: [`backend/app/rag/orchestrator.py`](../backend/app/rag/orchestrator.py)
 - **State Machine & Convergence**:
-  - **Threshold Gate**: $\tau = 0.75$ (75% grounding).
-  - **Safety Bound**: $K_{\max} = 3$ iterations.
-  - **Pass 1**: If $G(A, \mathcal{E}_1) < \tau$, self-correction triggers (`self_correction_triggered = True`).
-  - **Autonomous Query Reformulation**: Aegis extracts unsupported claims $\mathcal{U} = \{c_i \mid \text{not grounded}\}$ and synthesizes an expanded search query:
-    $$q_{t+1} = \text{Reformulate}(q_t, \mathcal{U})$$
-  - **Pass 2 Retrieval**: Fetches secondary evidence $\mathcal{E}_2$, deduplicates with $\mathcal{E}_1$, regenerates the answer, and re-evaluates grounding until $G \ge \tau$.
-  - **Graceful Fallback**: If $t = K_{\max}$ and $G < \tau$, Aegis transparently reports:
+  - **Threshold Gate**: Grounding coverage threshold = 0.75 (75% grounding).
+  - **Safety Bound**: Maximum 3 iterations.
+  - **Pass 1**: If coverage < 0.75, self-correction triggers (`self_correction_triggered = True`).
+  - **Autonomous Query Reformulation**: Aegis extracts unsupported claims and synthesizes an expanded search query:
+
+    ![Query Reformulation Formulation](./equations/query_reformulate.png)
+
+  - **Pass 2 Retrieval**: Fetches secondary evidence, deduplicates with existing chunks, regenerates the answer, and re-evaluates grounding until coverage >= 0.75.
+  - **Graceful Fallback**: If maximum iterations reached without satisfying threshold, Aegis transparently reports:
     > *"I couldn't find sufficient evidence in the uploaded sources to answer this confidently."*
 
 ---
