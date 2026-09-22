@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Send,
   Shield,
@@ -38,6 +38,11 @@ export const AskAegisPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([DEFAULT_WELCOME]);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
   const [activeTrace, setActiveTrace] = useState<RetrievalTrace | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
   // Load persistent chat history from local storage folder on mount
   useEffect(() => {
@@ -242,6 +247,7 @@ export const AskAegisPage: React.FC = () => {
             </div>
           </div>
         )}
+        <div ref={chatEndRef} />
       </div>
 
       {/* Query Input Bar */}
