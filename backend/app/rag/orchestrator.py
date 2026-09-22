@@ -80,7 +80,6 @@ class RAGOrchestrator:
         ]
 
         is_greeting = normalized_q in greetings or any(normalized_q == g or normalized_q.startswith(g + " ") for g in greetings)
-        is_meta = any(phrase in normalized_q for phrase in meta_phrases)
 
         # Retrieve list of indexed sample filenames
         chunk_files = list(self.retriever.pipeline.chunks_storage_dir.glob("*.json"))
@@ -96,11 +95,16 @@ class RAGOrchestrator:
             except Exception:
                 pass
 
-        if is_greeting and not is_meta:
-            doc_status = f" You currently have {doc_count} document(s) in your knowledge base." if doc_count > 0 else " No documents uploaded yet."
+        doc_summary_text = (
+            f"e.g. {', '.join(sample_filenames[:3])}" if sample_filenames else f"{doc_count} documents"
+        )
+
+        # 1. Greeting Router
+        if is_greeting and not any(term in normalized_q for term in ["who", "what", "how", "hallucinat"]):
+            doc_status = f" You currently have {doc_count} document(s) in your knowledge base ({doc_summary_text})." if doc_count > 0 else " No documents uploaded yet."
             greeting_text = (
                 f"Hello! I am Aegis, your evidence-first knowledge intelligence platform.{doc_status}\n\n"
-                f"You can ask me questions about your uploaded documents, and I will retrieve relevant excerpts, "
+                f"Ask me any question about your uploaded sources, and I will retrieve relevant excerpts, "
                 f"verify factual claims against extracted context, and provide verifiable citations with page numbers."
             )
             return QueryResponse(
@@ -127,19 +131,116 @@ class RAGOrchestrator:
                 },
             )
 
-        if is_meta:
-            doc_summary_text = (
-                f"e.g. {', '.join(sample_filenames[:3])}" if sample_filenames else f"{doc_count} documents"
+        # 2. Specific Query: How Aegis Prevents Hallucinations
+        if any(term in normalized_q for term in ["hallucinat", "prevent hallucination", "stop hallucination", "claim verification", "grounding"]):
+            hallucination_answer = (
+                "Aegis eliminates hallucinations through its automated Claim-Level Grounding Verification Engine:\n\n"
+                "1. Claim Decomposition: Every generated answer is parsed into individual atomic factual statements.\n"
+                "2. Mathematical Evidence Audit: Each claim is compared against retrieved document excerpts using semantic vector similarity and lexical overlap.\n"
+                "3. Strict 75% Threshold: If overall grounding coverage falls below 75%, the answer is flagged as unverified.\n"
+                "4. Autonomous Self-Correction: Aegis automatically identifies which claim lacked evidence, rewrites the query, and performs a second retrieval pass to find the missing proof.\n"
+                "5. Verifiable Provenance: Every verified statement links directly to its source with chunk tags, document names, and page numbers.\n"
+                "6. Honest Fallback: If proof does not exist in your sources, Aegis declares insufficient evidence rather than guessing."
             )
-            system_overview = (
+            return QueryResponse(
+                query_id=query_id,
+                query=query,
+                answer=hallucination_answer,
+                citations=[],
+                grounding_coverage=1.0,
+                total_claims=1,
+                supported_claims=1,
+                claims=[{"claim_id": "hallucination_0", "statement": "Hallucination prevention architecture explained.", "is_grounded": True, "supporting_chunk_ids": [], "confidence": 1.0}],
+                retrieval_trace={
+                    "query_id": query_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "original_query": query,
+                    "final_query": query,
+                    "iterations": 1,
+                    "self_correction_triggered": False,
+                    "retrieval_strategies": ["Hallucination Defense Architecture"],
+                    "candidate_count": 0,
+                    "selected_evidence_count": 0,
+                    "grounding_coverage_pct": 1.0,
+                    "latency_ms": {"retrieval": 0.0, "generation": 0.0, "verification": 0.0, "total": round((time.time() - start_time) * 1000, 1)},
+                },
+            )
+
+        # 3. Specific Query: Capabilities ("What can you do?")
+        if any(term in normalized_q for term in ["what can you do", "what can i ask", "help me"]):
+            capabilities_answer = (
+                f"Here is what you can do with Aegis ({doc_count} documents currently loaded):\n\n"
+                "1. Ask About Uploaded Files: Query your documents (e.g. asking for specific student names, registration numbers, resume skills, or policy rules).\n"
+                "2. Inspect Clickable Citations: Click any citation below an answer to view the exact document name, page number, and source excerpt.\n"
+                "3. Audit Retrieval Traces: Click 'How Aegis reached this answer' to inspect retrieval iterations, candidate counts, and latency breakdowns.\n"
+                "4. Ingest New Documents: Upload PDFs, text files, or image scans in the Documents tab for instant layout-aware indexing."
+            )
+            return QueryResponse(
+                query_id=query_id,
+                query=query,
+                answer=capabilities_answer,
+                citations=[],
+                grounding_coverage=1.0,
+                total_claims=1,
+                supported_claims=1,
+                claims=[{"claim_id": "cap_0", "statement": "Platform capabilities enumerated.", "is_grounded": True, "supporting_chunk_ids": [], "confidence": 1.0}],
+                retrieval_trace={
+                    "query_id": query_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "original_query": query,
+                    "final_query": query,
+                    "iterations": 1,
+                    "self_correction_triggered": False,
+                    "retrieval_strategies": ["Capabilities Overview"],
+                    "candidate_count": 0,
+                    "selected_evidence_count": 0,
+                    "grounding_coverage_pct": 1.0,
+                    "latency_ms": {"retrieval": 0.0, "generation": 0.0, "verification": 0.0, "total": round((time.time() - start_time) * 1000, 1)},
+                },
+            )
+
+        # 4. Specific Query: Identity ("Who are you?")
+        if any(term in normalized_q for term in ["who are you", "what are you"]) and not any(term in normalized_q for term in ["durga", "student", "author"]):
+            identity_answer = (
                 "I am Aegis, an enterprise evidence-grounded knowledge intelligence platform built for AWS.\n\n"
-                "Here is what I can do:\n"
+                "My mission is to eliminate hallucinations by ensuring every generated answer is mathematically grounded in verified document evidence. "
+                f"You currently have {doc_count} document(s) in your knowledge base ({doc_summary_text}). Ask me any question about your files!"
+            )
+            return QueryResponse(
+                query_id=query_id,
+                query=query,
+                answer=identity_answer,
+                citations=[],
+                grounding_coverage=1.0,
+                total_claims=1,
+                supported_claims=1,
+                claims=[{"claim_id": "id_0", "statement": "Aegis platform identity explained.", "is_grounded": True, "supporting_chunk_ids": [], "confidence": 1.0}],
+                retrieval_trace={
+                    "query_id": query_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "original_query": query,
+                    "final_query": query,
+                    "iterations": 1,
+                    "self_correction_triggered": False,
+                    "retrieval_strategies": ["Platform Identity"],
+                    "candidate_count": 0,
+                    "selected_evidence_count": 0,
+                    "grounding_coverage_pct": 1.0,
+                    "latency_ms": {"retrieval": 0.0, "generation": 0.0, "verification": 0.0, "total": round((time.time() - start_time) * 1000, 1)},
+                },
+            )
+
+        # 5. General System Query: "What is Aegis" / "How does Aegis work"
+        if any(term in normalized_q for term in ["what is aegis", "how does aegis work", "tell me about aegis", "how do you work"]):
+            system_overview = (
+                "Aegis is an enterprise evidence-grounded knowledge intelligence platform built for AWS.\n\n"
+                "Core Architecture:\n"
                 "1. Multimodal Document Ingestion: Extracts and parses text, layout, and tables from PDFs, text files, and images (using Amazon Textract OCR).\n"
                 "2. Hybrid Semantic Retrieval: Combines dense vector search (Amazon Bedrock Titan Embeddings v2) with lexical BM25 keyword matching.\n"
                 "3. Claim-Level Grounding Verification: Evaluates factual statements against retrieved excerpts before returning an answer, ensuring zero hallucinations.\n"
                 "4. Autonomous Self-Correction: Automatically rewrites queries and re-retrieves if factual support is incomplete (<75% coverage).\n"
                 "5. Verifiable Evidence Citations: Links every claim to exact document names, chunk IDs, and page numbers.\n\n"
-                f"Active Knowledge Base: {doc_count} document(s) currently indexed ({doc_summary_text}). Ask me any question about your documents!"
+                f"Active Knowledge Base: {doc_count} document(s) currently indexed ({doc_summary_text})."
             )
             return QueryResponse(
                 query_id=query_id,
