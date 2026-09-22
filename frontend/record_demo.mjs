@@ -96,17 +96,35 @@ async function delay(ms) {
   // Question 1: Natural Conversation & Capability Overview
   await askAndShowAnswer('Hello Aegis, who are you and what can you do?', 6);
 
-  // Question 2: Factual Document Extraction (Academics & CGPA)
-  await askAndShowAnswer("What is Durga Prasad's educational qualification, college name, and GPA?", 7);
+  // Question 2: Technical Skills from Resume
+  await askAndShowAnswer('What technical skills and programming languages are listed in his resume?', 6);
 
-  // Question 3: Deep Technical Skills & Languages from Resume
-  await askAndShowAnswer('What technical skills and programming languages are listed in his resume?', 7);
+  // Question 3: Architecture & Hallucination Prevention
+  await askAndShowAnswer('What is Aegis and how does it prevent hallucinations?', 6);
 
-  // Question 4: Self-Correction & Hallucination Prevention Architecture
-  await askAndShowAnswer('How does Aegis self-correct and prevent hallucinations?', 7);
+  // Question 4: DIFFICULT QUERY - PROVE SELF-CORRECTION IN ACTION (Cross-document academic + projects)
+  console.log('\n[*] Asking difficult multi-document verification query to prove autonomous self-correction...');
+  await askAndShowAnswer("Cross-reference Durga Prasad's academic percentage with his projects from his resume", 7);
 
   // ==========================================
-  // SCENE 2: Inspect Supporting Evidence Citation
+  // SCENE 2: Inspect Self-Correction Reasoning Trace Modal (PROVING PASS 1 VS PASS 2)
+  // ==========================================
+  console.log('\n[*] Inspecting "How Aegis reached this answer" Trace Modal to showcase Self-Correction audit...');
+  const traceLinks = await page.$$('text=How Aegis reached this answer');
+  if (traceLinks.length > 0) {
+    // Click the trace link on the most recent self-corrected message
+    await traceLinks[traceLinks.length - 1].click();
+    console.log('[*] Opened Reasoning Trace Modal: Displaying Pass 1 Insufficiency -> Autonomous Rewrite -> Pass 2 Verification.');
+    await delay(7500); // Linger so judges can read every single detail of the self-correction proof
+
+    // Close trace modal
+    const closeBtn = await page.$('button:has(svg.lucide-x)');
+    if (closeBtn) await closeBtn.click();
+    await delay(1200);
+  }
+
+  // ==========================================
+  // SCENE 3: Inspect Supporting Evidence Citation
   // ==========================================
   console.log('\n[*] Inspecting Supporting Evidence Citation Modal...');
   const citationButtons = await page.$$('button:has(svg.lucide-file-text)');
@@ -116,22 +134,6 @@ async function delay(ms) {
     await delay(4500); // Linger so viewer can read the cited document text
 
     // Close citation modal
-    const closeBtn = await page.$('button:has(svg.lucide-x)');
-    if (closeBtn) await closeBtn.click();
-    await delay(1200);
-  }
-
-  // ==========================================
-  // SCENE 3: Inspect Retrieval & Reasoning Trace Modal
-  // ==========================================
-  console.log('\n[*] Inspecting "How Aegis reached this answer" Trace Modal...');
-  const traceLinks = await page.$$('text=How Aegis reached this answer');
-  if (traceLinks.length > 0) {
-    await traceLinks[traceLinks.length - 1].click();
-    console.log('[*] Opened Reasoning Trace Modal: candidate chunks, evidence count, coverage 100%.');
-    await delay(5000); // Linger so viewer can read trace details
-
-    // Close trace modal
     const closeBtn = await page.$('button:has(svg.lucide-x)');
     if (closeBtn) await closeBtn.click();
     await delay(1200);
