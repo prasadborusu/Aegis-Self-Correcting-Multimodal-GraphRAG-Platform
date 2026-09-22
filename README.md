@@ -65,6 +65,18 @@ flowchart TD
 
 ---
 
+## Demonstrated Technical Story & Implementation Scope
+
+Aegis is built around an uncompromising, mathematically grounded technical story:
+
+$$\text{Document} \longrightarrow \text{Structure-Aware Extraction} \longrightarrow \text{Provenance Chunking} \longrightarrow \text{Bedrock Embeddings} \longrightarrow \text{Hybrid Retrieval} \longrightarrow \text{Grounded Answer} \longrightarrow \text{Self-Correction} \longrightarrow \text{Traceability}$$
+
+> 📋 **Detailed Architecture Scope**: For full transparency regarding verified components versus roadmap scaffolding, see [docs/ARCHITECTURE_IMPLEMENTED.md](docs/ARCHITECTURE_IMPLEMENTED.md).
+>
+> 🏆 **Judges Quickstart & CLI Verification**: Run automated verification in 1 command using [docs/JUDGES_EVALUATION_GUIDE.md](docs/JUDGES_EVALUATION_GUIDE.md).
+
+---
+
 ## AWS Services
 
 | AWS Service | Purpose in Aegis |
