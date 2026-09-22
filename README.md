@@ -204,6 +204,22 @@ npm run build
 
 ---
 
+## Interactive Queries to Try
+
+Test the platform's multi-tier capabilities directly in the web UI:
+
+1. **Conversational Greeting & Capabilities**:
+   * `"Hello Aegis, who are you and what can you do?"`
+   * Demonstrates instant conversational routing without wasteful vector retrieval.
+2. **Deep Technical Fact Extraction**:
+   * `"What technical skills and programming languages are listed in his resume?"`
+   * Demonstrates layout-aware extraction with verified claim tags and chunk citations.
+3. **The Multi-Document Self-Correction Query**:
+   * `"Cross-reference Durga Prasad's academic percentage with his projects from his resume"`
+   * Triggers the 2-pass self-correction engine, displaying the `Self-Corrected (2 Passes)` badge and multi-pass audit in the Reasoning Trace modal.
+
+---
+
 ## Security
 
 * **IAM Least Privilege**: Lambda execution roles are scoped strictly to required S3 buckets, DynamoDB tables, and Bedrock model ARNs.
