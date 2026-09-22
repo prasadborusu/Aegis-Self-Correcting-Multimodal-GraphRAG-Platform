@@ -68,10 +68,15 @@ class RAGOrchestrator:
         query_id = str(uuid.uuid4())
 
         # Check for conversational greeting or meta-intent
+        import re
         normalized_q = query.strip().lower().rstrip("!?. ")
+        collapsed_q = re.sub(r"(.)\1{2,}", r"\1", normalized_q)
+
         greetings = {
-            "hi", "hello", "hey", "greetings", "good morning", "good afternoon",
-            "good evening", "howdy", "hola", "hi aegis", "hello aegis", "hey aegis"
+            "hi", "hello", "hey", "hlo", "helo", "hlw", "hai", "hii", "hiii",
+            "heyy", "heyyy", "heyya", "yo", "sup", "wassup", "what's up", "whats up",
+            "greetings", "good morning", "good afternoon", "good evening", "howdy",
+            "hola", "namaste", "vanakkam", "hi aegis", "hello aegis", "hey aegis", "hlo aegis"
         }
         meta_phrases = [
             "who are you", "what are you", "what can you do", "what is aegis",
@@ -79,7 +84,12 @@ class RAGOrchestrator:
             "what can i ask", "help"
         ]
 
-        is_greeting = normalized_q in greetings or any(normalized_q == g or normalized_q.startswith(g + " ") for g in greetings)
+        is_greeting = (
+            normalized_q in greetings
+            or collapsed_q in greetings
+            or any(normalized_q == g or normalized_q.startswith(g + " ") for g in greetings)
+            or any(collapsed_q == g or collapsed_q.startswith(g + " ") for g in greetings)
+        )
 
         # Retrieve list of indexed sample filenames
         chunk_files = list(self.retriever.pipeline.chunks_storage_dir.glob("*.json"))
