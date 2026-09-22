@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aegis — Architecture & AWS Systems Engineering Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Mermaid.js for live SVG flowchart rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      flowchart: { curve: 'basis', padding: 20 },
+      fontFamily: 'Inter, sans-serif'
+    });
+  </script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #eff6ff;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+      --emerald-600: #059669;
+      --emerald-50: #ecfdf5;
+      --amber-600: #d97706;
+      --amber-50: #fffbeb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--slate-50);
+      color: var(--slate-800);
+      line-height: 1.6;
+      padding: 0;
+    }
+    header {
+      background: white;
+      border-bottom: 1px solid var(--slate-200);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+    .brand-title {
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--slate-900);
+      letter-spacing: -0.02em;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-blue { background: var(--primary-light); color: var(--primary); border: 1px solid #bfdbfe; }
+    .badge-green { background: var(--emerald-50); color: var(--emerald-600); border: 1px solid #a7f3d0; }
+    .badge-amber { background: var(--amber-50); color: var(--amber-600); border: 1px solid #fde68a; }
+
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1.5rem 4rem 1.5rem;
+    }
+    .hero {
+      background: white;
+      border: 1px solid var(--slate-200);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 4px 20px -4px rgba(0,0,0,0.05);
+    }
+    .hero h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+    }
+    .hero p.tagline {
+      font-size: 1.15rem;
+      color: var(--slate-600);
+      margin-bottom: 1.5rem;
+      max-width: 900px;
+    }
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 6px rgba(37,99,235,0.3);
+    }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-secondary {
+      background: white;
+      color: var(--slate-700);
+      border: 1px solid var(--slate-300);
+    }
+    .btn-secondary:hover { background: var(--slate-100); }
+
+    .card {
+      background: white;
+      border: 1px solid var(--slate-200);
+      border-radius: 14px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+    .card-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .mermaid-wrapper {
+      background: #fdfdfd;
+      border: 1px solid var(--slate-200);
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+      margin: 1.5rem 0;
+    }
+
+    .formula-box {
+      background: var(--slate-100);
+      border-left: 4px solid var(--primary);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--slate-900);
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.875rem;
+    }
+    th, td {
+      padding: 0.85rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--slate-200);
+    }
+    th {
+      background: var(--slate-50);
+      color: var(--slate-700);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    tr:hover td { background: #fbfcfe; }
+
+    .step-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .step-card {
+      border: 1px solid var(--slate-200);
+      border-radius: 10px;
+      padding: 1.25rem;
+      background: white;
+      transition: all 0.2s ease;
+    }
+    .step-card:hover {
+      border-color: #93c5fd;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.08);
+    }
+    .step-num {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-align: center;
+      line-height: 28px;
+      margin-bottom: 0.5rem;
+    }
+    .step-card h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin-bottom: 0.35rem;
+    }
+    .step-card p {
+      font-size: 0.825rem;
+      color: var(--slate-600);
+    }
+
+    .code-inline {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--slate-100);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: #0369a1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo-icon">🛡️</div>
+        <div>
+          <div class="brand-title">AEGIS PLATFORM</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <span class="badge badge-blue">AWS ap-south-1</span>
+        <span class="badge badge-green">Bedrock Titan v2</span>
+        <span class="badge badge-amber">Self-Correction Active</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Hero Section -->
+    <div class="hero">
+      <span class="badge badge-blue" style="margin-bottom: 0.75rem;">Enterprise AI Architecture</span>
+      <h1>Aegis — Self-Correcting Multimodal RAG Platform</h1>
+      <p class="tagline">
+        An evidence-first knowledge intelligence platform built on AWS that mathematically audits factual claims, preserves document provenance, and autonomously executes secondary retrieval cycles when evidence is incomplete.
+      </p>
+
+      <div class="cta-row">
+        <a href="../recordings/aegis_demo_walkthrough.mp4" class="btn btn-primary" download>
+          ▶️ Download Walkthrough Video (MP4, 720p HD)
+        </a>
+        <a href="../recordings/aegis_demo_walkthrough.webm" class="btn btn-secondary">
+          🌐 WebM Stream
+        </a>
+        <a href="DEMO_WALKTHROUGH.html" class="btn btn-secondary">
+          ⏱️ Scene Timestamps
+        </a>
+        <a href="https://github.com/prasadborusu/Aegis-Self-Correcting-Multimodal-GraphRAG-Platform" class="btn btn-secondary" target="_blank">
+          🐙 GitHub Repository
+        </a>
+      </div>
+    </div>
+
+    <!-- Live Mermaid Architecture Diagram -->
+    <div class="card">
+      <h2 class="card-title">🏛️ End-to-End System Architecture Flowchart</h2>
+      <p style="color: var(--slate-600); font-size: 0.9rem;">
+        The complete data flow from client ingestion through structure-aware parsing, Bedrock embeddings, hybrid OpenSearch retrieval, claim evaluation, and the closed-loop self-correction cycle.
+      </p>
+
+      <div class="mermaid-wrapper">
+        <pre class="mermaid">
+flowchart TD
+    User([User / Enterprise Client]) -->|React UI / API| APIGW[Amazon API Gateway / FastAPI]
+    APIGW -->|Upload Document| S3Raw[Amazon S3: Raw Sources]
+    APIGW -->|Store Metadata| DDBMeta[(Amazon DynamoDB: Metadata)]
+    
+    subgraph Ingestion Pipeline
+        S3Raw --> Extract[Extraction / Textract / PyMuPDF]
+        Extract --> Norm[Normalization]
+        Norm --> Chunk[Structure-Aware Chunking]
+        Chunk --> BedrockEmb[Amazon Bedrock: Titan Text Embeddings]
+        BedrockEmb --> OSIndex[(Amazon OpenSearch Serverless: Vector & Hybrid)]
+    end
+
+    subgraph Self-Correcting Retrieval Engine
+        APIGW -->|Submit Query| QueryPlan[Query Understanding & Retrieval Planning]
+        QueryPlan --> OSIndex
+        OSIndex --> Candidates[Candidate Pool]
+        Candidates --> Rerank[Reranker]
+        Rerank --> Evidence[Grounded Evidence Context]
+        Evidence --> BedrockGen[Amazon Bedrock: Generation LLM]
+        BedrockGen --> AnswerDraft[Draft Answer + Claims]
+        AnswerDraft --> GroundingEval[Claim-Level Grounding Evaluation]
+        
+        GroundingEval -->|Coverage >= Threshold| FinalAnswer[Final Verified Answer + Real Citations]
+        GroundingEval -->|Coverage < Threshold & Iterations < 3| ReQuery[Query Rewrite & Secondary Retrieval]
+        ReQuery --> OSIndex
+    end
+
+    FinalAnswer --> Trace[(DynamoDB: Retrieval Traces)]
+    FinalAnswer --> User
+        </pre>
+      </div>
+    </div>
+
+    <!-- Mathematical Formulations & Technical Approach -->
+    <div class="card">
+      <h2 class="card-title">🔬 In-Depth Technical Approach & Mathematical Formulations</h2>
+
+      <div class="step-grid">
+        <div class="step-card">
+          <span class="step-num">1</span>
+          <h4>Structure-Aware Extraction</h4>
+          <p>PyMuPDF layout analysis extracts heading hierarchies (H1-H3), line weights, tabular delimiters, and page bounds ($p \in [1, P]$), preserving logical document structure.</p>
+        </div>
+
+        <div class="step-card">
+          <span class="step-num">2</span>
+          <h4>Deterministic Chunk Hashing</h4>
+          <p>Chunks are partitioned along logical section boundaries and tagged with immutable metadata: $c_{\text{id}} = \text{UUID}(d_{\text{id}} \parallel p \parallel \text{idx})$.</p>
+        </div>
+
+        <div class="step-card">
+          <span class="step-num">3</span>
+          <h4>Bedrock Titan v2 Embeddings</h4>
+          <p>Generates 1024-dimensional normalized vectors ($\|\mathbf{v}\|_2 = 1$) via <span class="code-inline">amazon.titan-embed-text-v2:0</span> for cosine proximity scoring.</p>
+        </div>
+
+        <div class="step-card">
+          <span class="step-num">4</span>
+          <h4>Hybrid Retrieval Equation</h4>
+          <p>Fuses semantic vector proximity with BM25 keyword matching to retrieve both conceptual topics and exact identifiers.</p>
+          <div class="formula-box">
+Score(c, q) = 0.70 · cos(v_q, v_c) + 0.30 · BM25(c, q)
+          </div>
+        </div>
+
+        <div class="step-card">
+          <span class="step-num">5</span>
+          <h4>Atomic Claim Decomposition</h4>
+          <p>Answers are segmented into atomic claims $A = \{c_1, \dots, c_N\}$. Each claim is audited for lexical/semantic entailment against evidence chunks $\mathcal{E}$.</p>
+          <div class="formula-box">
+Grounding Coverage = (1/N) · Σ 𝟙(Confidence(c_i | E) >= 0.40)
+          </div>
+        </div>
+
+        <div class="step-card">
+          <span class="step-num">6</span>
+          <h4>Autonomous Self-Correction Gate</h4>
+          <p>If Grounding Coverage &lt; 75%, the query is reformulated to target missing entities ($q_{t+1} = \text{Reformulate}(q_t, \mathcal{U})$), executing Pass 2 retrieval.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero Feature: Live Walkthrough Proof -->
+    <div class="card">
+      <h2 class="card-title">⚡ The Hero Feature: Live Self-Correction in Action</h2>
+      <p style="color: var(--slate-600); font-size: 0.9rem; margin-bottom: 1rem;">
+        Demonstrating the autonomous multi-pass loop using the cross-document test query:
+      </p>
+
+      <div style="background: var(--slate-100); padding: 1rem; border-radius: 8px; font-weight: 600; color: var(--slate-900); margin-bottom: 1.5rem;">
+        "Cross-reference Durga Prasad's academic percentage with his projects from his resume"
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Pass</th>
+            <th>Retrieved Sources</th>
+            <th>Grounding Coverage</th>
+            <th>System State & Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>PASS 1</strong></td>
+            <td>Student Final Result Report.pdf (Grade Card only)</td>
+            <td><span class="badge badge-amber">60% (INSUFFICIENT)</span></td>
+            <td>Claims for technical projects lack evidence. Autonomous query rewrite triggered.</td>
+          </tr>
+          <tr>
+            <td><strong>ACTION</strong></td>
+            <td colspan="3"><span class="code-inline">Rewrote query: "... resume technical projects experience"</span></td>
+          </tr>
+          <tr>
+            <td><strong>PASS 2</strong></td>
+            <td>Student Final Result Report.pdf + Durga_Prasad_Resume.pdf</td>
+            <td><span class="badge badge-green">80%+ (VERIFIED)</span></td>
+            <td>Consensus reached. Dual citations verified. Displayed with amber <span class="badge badge-amber">Self-Corrected (2 Passes)</span> badge.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Main Useful Features Matrix -->
+    <div class="card">
+      <h2 class="card-title">🌟 Main Useful Features & Enterprise Capabilities</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Enterprise Benefit</th>
+            <th>Implementation Reference</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>🛡️ Autonomous Self-Correction</strong></td>
+            <td>Eliminates single-shot failures by automatically re-querying when evidence is incomplete.</td>
+            <td><span class="code-inline">backend/app/rag/orchestrator.py</span></td>
+          </tr>
+          <tr>
+            <td><strong>🏷️ Zero-Hallucination Claim Tags</strong></td>
+            <td>Every statement is tagged inline (<span class="code-inline">[VERIFIED]</span>) and linked to source chunk IDs.</td>
+            <td><span class="code-inline">backend/app/rag/generator.py</span></td>
+          </tr>
+          <tr>
+            <td><strong>📑 Clickable Citation Drawer</strong></td>
+            <td>Users click any citation to view the exact document excerpt, relevance score, and page number.</td>
+            <td><span class="code-inline">frontend/src/pages/AskAegisPage.tsx</span></td>
+          </tr>
+          <tr>
+            <td><strong>🔍 Reasoning Trace Modal</strong></td>
+            <td>Full auditability into Pass 1 vs. Pass 2 candidate counts and millisecond latency breakdowns.</td>
+            <td><span class="code-inline">activeTrace</span> state modal</td>
+          </tr>
+          <tr>
+            <td><strong>🌐 Multi-Document Cross-Referencing</strong></td>
+            <td>Synthesizes facts across multiple disparate documents (e.g. academic records vs. resumes).</td>
+            <td><span class="code-inline">_synthesize_grounded_answer</span></td>
+          </tr>
+          <tr>
+            <td><strong>⚡ Conversational Intent Routing</strong></td>
+            <td>Instantly responds to greetings without firing expensive, wasteful vector searches.</td>
+            <td><span class="code-inline">orchestrator.py</span> intent classifier</td>
+          </tr>
+          <tr>
+            <td><strong>💾 Persistent Chat History</strong></td>
+            <td>Conversations persist across sessions in local storage and DynamoDB tables.</td>
+            <td><span class="code-inline">.storage/conversations/default.json</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- AWS Services Matrix -->
+    <div class="card">
+      <h2 class="card-title">☁️ AWS Cloud Infrastructure Matrix</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>AWS Service</th>
+            <th>Architecture Role</th>
+            <th>Infrastructure Definition</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Amazon Bedrock</strong></td>
+            <td>Titan Text Embeddings v2 (1024-dim) & Claude 3 Converse API.</td>
+            <td><span class="code-inline">template.yaml</span> IAM policies</td>
+          </tr>
+          <tr>
+            <td><strong>Amazon S3</strong></td>
+            <td>Private, encrypted raw document bucket with AES-256 server-side encryption.</td>
+            <td><span class="code-inline">RawDocumentsBucket</span></td>
+          </tr>
+          <tr>
+            <td><strong>Amazon DynamoDB</strong></td>
+            <td>Document state tracking, retrieval traces, and conversation logs.</td>
+            <td><span class="code-inline">DocumentsTable</span>, <span class="code-inline">ConversationsTable</span></td>
+          </tr>
+          <tr>
+            <td><strong>AWS Lambda & API Gateway</strong></td>
+            <td>Serverless API routing and asynchronous execution.</td>
+            <td><span class="code-inline">FastAPIFunction</span> via Mangum ASGI</td>
+          </tr>
+          <tr>
+            <td><strong>Amazon OpenSearch Serverless</strong></td>
+            <td>Vector k-NN collection and BM25 inverted lexical index.</td>
+            <td><span class="code-inline">settings.opensearch_endpoint</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</body>
+</html>
