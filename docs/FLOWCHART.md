@@ -1,5 +1,10 @@
 # Architecture Flowchart
 
+![Architecture Flowchart](./architecture_flowchart.png)
+
+<details>
+<summary><b>Mermaid Diagram Source Code</b></summary>
+
 ```mermaid
 flowchart TD
     User([User / Enterprise Client]) -->|React UI / API| APIGW[Amazon API Gateway / FastAPI]
@@ -32,3 +37,5 @@ flowchart TD
     FinalAnswer --> Trace[(DynamoDB: Retrieval Traces)]
     FinalAnswer --> User
 ```
+
+</details>

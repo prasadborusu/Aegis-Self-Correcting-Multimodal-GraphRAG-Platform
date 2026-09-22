@@ -25,6 +25,11 @@ A high-definition video walkthrough showing live multi-pass self-correction, fac
 
 ## 🏛️ End-to-End System Architecture Flowchart
 
+![End-to-End System Architecture Flowchart](./architecture_flowchart.png)
+
+<details>
+<summary><b>Mermaid Diagram Code</b></summary>
+
 ```mermaid
 flowchart TD
     User([User / Enterprise Client]) -->|React UI / API| APIGW[Amazon API Gateway / FastAPI]
@@ -57,6 +62,8 @@ flowchart TD
     FinalAnswer --> Trace[(DynamoDB: Retrieval Traces)]
     FinalAnswer --> User
 ```
+
+</details>
 
 ---
 
