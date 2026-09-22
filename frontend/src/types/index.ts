@@ -100,6 +100,7 @@ export interface RetrievalTrace {
   selected_evidence_count: number;
   grounding_coverage_pct: number;
   self_correction_triggered: boolean;
+  attempt_history?: any[];
   latency_ms: {
     retrieval: number;
     generation: number;
