@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     )
 
     # Application
-    app_name: str = "Aegis - Self-Correcting Multimodal GraphRAG"
+    app_name: str = "Aegis - Self-Correcting Multimodal RAG"
     app_version: str = "0.1.0"
     app_env: str = Field(default="development", description="Environment name")
     log_level: str = Field(default="INFO", description="Logging level")

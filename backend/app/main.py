@@ -1,5 +1,5 @@
 """
-Aegis - Self-Correcting Multimodal GraphRAG Backend
+Aegis - Self-Correcting Multimodal RAG Backend
 Main FastAPI Application Entrypoint
 """
 

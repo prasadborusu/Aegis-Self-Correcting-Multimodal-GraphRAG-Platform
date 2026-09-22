@@ -1,6 +1,7 @@
-# Aegis — Self-Correcting Multimodal GraphRAG Platform
+# Aegis — Self-Correcting Multimodal RAG Platform
 
-> **Aegis does not simply generate an answer. It retrieves evidence, reasons over that evidence, verifies the answer, and corrects its retrieval when necessary.**
+> **Aegis does not simply generate an answer. It retrieves evidence, verifies factual claims against extracted source chunks, and autonomously corrects its retrieval when evidence is incomplete.**  
+> *(Graph reasoning and Amazon Neptune traversal are planned for Phase 2; the demonstrated and verified core is closed-loop Self-Correcting Multimodal RAG. See [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) for full feature-by-feature reality).*
 
 Aegis is an enterprise-grade, evidence-first knowledge intelligence platform built on AWS. Designed to solve the pervasive hallucination problem in enterprise AI, Aegis combines structure-aware document parsing, hybrid vector/keyword retrieval, claim-level factual grounding, and an autonomous self-correction loop to deliver verifiable, cited answers from complex documents.
 
