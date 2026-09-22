@@ -213,14 +213,17 @@ class GroundedGenerator:
 
         scored_sentences = []
         for chunk, chunk_score in evidence_chunks:
-            lines = [l.strip() for l in re.split(r"[\n.]+", chunk.text) if len(l.strip()) > 3]
-            for line in lines:
+            lines = [l.strip() for l in chunk.text.split("\n") if len(l.strip()) > 3]
+            for idx, line in enumerate(lines):
                 line_words = set(re.findall(r"\w+", line.lower()))
                 if not line_words:
                     continue
                 match_count = len(key_terms.intersection(line_words))
                 if match_count > 0:
-                    scored_sentences.append((line, match_count, chunk))
+                    content = line
+                    if len(line) < 35 and idx + 1 < len(lines):
+                        content = f"{line}: {lines[idx + 1]}"
+                    scored_sentences.append((content, match_count, chunk))
 
         if not scored_sentences:
             top_chunk, _ = evidence_chunks[0]
@@ -235,14 +238,14 @@ class GroundedGenerator:
         seen_lines = set()
         primary_chunk = scored_sentences[0][2]
 
-        for line, count, chunk in scored_sentences[:3]:
-            norm_line = line.lower()
-            if norm_line not in seen_lines:
-                seen_lines.add(norm_line)
-                selected_answers.append(f"{line} [Chunk: {chunk.chunk_id}]")
+        for content, count, chunk in scored_sentences[:3]:
+            norm_content = content.lower()
+            if norm_content not in seen_lines:
+                seen_lines.add(norm_content)
+                selected_answers.append(f"{content} [Chunk: {chunk.chunk_id}]")
 
         doc_name = primary_chunk.metadata.filename or "the verified evidence"
-        combined = " ".join(selected_answers)
-        return f"According to {doc_name}: {combined}"
+        combined = "\n\n".join(selected_answers)
+        return f"According to {doc_name}:\n\n{combined}"
 
 
