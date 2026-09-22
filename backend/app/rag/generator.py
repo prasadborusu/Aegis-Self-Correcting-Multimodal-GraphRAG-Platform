@@ -90,7 +90,7 @@ class GroundedGenerator:
             return output_text.strip()
 
         except ClientError as e:
-            logger.error(f"Bedrock Converse API call failed ({e.response.get('Error', {}).get('Code')}): {e}")
+            logger.info(f"Bedrock Converse API offline ({e.response.get('Error', {}).get('Code')}), utilizing local grounded synthesis.")
             if evidence_chunks:
                 return self._synthesize_grounded_answer(query, evidence_chunks)
             return "I couldn't find sufficient evidence in the uploaded sources to answer this confidently."

@@ -55,7 +55,7 @@ class VectorSearchRetriever:
         try:
             query_embedding = self.embeddings_service.generate_embedding(query)
         except Exception as e:
-            logger.warning(f"Could not generate query embedding with Bedrock: {e}")
+            logger.info(f"Bedrock vector embedding offline, proceeding with keyword and lexical semantic scoring: {e}")
 
         # 2. Gather candidate chunks across specified or all ingested documents
         all_chunks: List[Chunk] = []

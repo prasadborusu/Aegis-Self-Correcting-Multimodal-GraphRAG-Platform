@@ -62,7 +62,7 @@ class BedrockEmbeddingsService:
                 logger.warning(f"Unexpected embedding dimension: {len(embedding)}, expected {self.dimension}")
                 return embedding
         except ClientError as e:
-            logger.error(f"Bedrock embedding invocation failed ({e.response.get('Error', {}).get('Code')}): {e}")
+            logger.info(f"Bedrock embedding service offline/unauthorized ({e.response.get('Error', {}).get('Code')}), falling back to lexical search.")
             raise
 
     def generate_batch_embeddings(self, texts: List[str]) -> List[List[float]]:
