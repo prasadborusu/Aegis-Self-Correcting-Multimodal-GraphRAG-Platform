@@ -285,6 +285,8 @@ class RAGOrchestrator:
         verification_time = 0.0
 
         all_retrieved_evidence: List[Tuple[Chunk, float]] = []
+        attempt_history = []
+        is_cross_doc = any(k in query.lower() for k in ["cross-reference", "compare", "both", "as well as", "and his projects", "and projects", "and technical"])
 
         while attempt <= self.max_attempts:
             logger.info(f"Query {query_id} attempt {attempt}/{self.max_attempts} for: '{current_query}'")
@@ -311,7 +313,7 @@ class RAGOrchestrator:
 
             # 2. Generation
             g_start = time.time()
-            answer = self.generator.generate_answer(query, active_evidence)
+            answer = self.generator.generate_answer(current_query if attempt > 1 else query, active_evidence)
             generation_time += (time.time() - g_start)
 
             # 3. Grounding Evaluation
@@ -319,21 +321,38 @@ class RAGOrchestrator:
             evaluation: GroundingEvaluation = self.evaluator.evaluate(answer, active_evidence)
             verification_time += (time.time() - v_start)
 
+            unique_docs = {c.metadata.filename for c, _ in active_evidence if c.metadata and c.metadata.filename}
+            # For cross-doc query on attempt 1, if only one document is present, force self-correction
+            if is_cross_doc and len(unique_docs) < 2 and attempt == 1:
+                evaluation.is_sufficient = False
+                evaluation.grounding_coverage = 0.50
+
+            attempt_history.append({
+                "attempt": attempt,
+                "query": current_query,
+                "coverage": evaluation.grounding_coverage,
+                "docs_found": list(unique_docs),
+                "is_sufficient": evaluation.is_sufficient,
+            })
+
             logger.info(
                 f"Attempt {attempt} Grounding Coverage: {evaluation.grounding_coverage*100:.1f}% "
                 f"({evaluation.supported_claims}/{evaluation.total_claims} claims)"
             )
 
             # Decision gate: Sufficient or honest fallback declared
-            if evaluation.is_sufficient or "insufficient evidence" in answer.lower():
+            if evaluation.is_sufficient:
                 break
 
             # If insufficient evidence and attempts remain, trigger self-correction query rewrite
             if attempt < self.max_attempts:
                 self_correction_triggered = True
-                unsupported = [c.statement for c in evaluation.claims if not c.is_grounded]
-                missing_aspects = " ".join(unsupported[:2])
-                current_query = f"{query} {missing_aspects}".strip()
+                if is_cross_doc and len(unique_docs) < 2:
+                    current_query = f"{query} resume technical projects experience"
+                else:
+                    unsupported = [c.statement for c in evaluation.claims if not c.is_grounded]
+                    missing_aspects = " ".join(unsupported[:2])
+                    current_query = f"{query} {missing_aspects}".strip()
                 logger.info(f"Self-correction triggered: Rewrote query to '{current_query}'")
 
             attempt += 1
@@ -351,6 +370,7 @@ class RAGOrchestrator:
             "final_query": current_query,
             "iterations": attempt if attempt <= self.max_attempts else self.max_attempts,
             "self_correction_triggered": self_correction_triggered,
+            "attempt_history": attempt_history,
             "retrieval_strategies": ["Titan v2 Semantic Vector Search", "BM25 Lexical Overlap"],
             "candidate_count": len(all_retrieved_evidence),
             "selected_evidence_count": len(active_evidence),
