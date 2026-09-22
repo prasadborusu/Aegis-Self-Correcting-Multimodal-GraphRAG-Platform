@@ -113,3 +113,41 @@ This log chronicles the disciplined development of **Aegis**, an evidence-first 
   * Headings test failed initially because sample text was smaller than `chunk_size`.
 * **Solution**:
   * Refined `StructureAwareChunker` so encountering a new section heading automatically completes the preceding chunk, enforcing natural semantic boundaries between distinct sections. All tests passed.
+
+---
+
+## Log Entry 003 — RAG Orchestrator, Claim-Level Grounding Verification, Multimodal OCR, & Interactive UI
+
+* **Date**: 2026-09-22
+* **Objective**: Implement hybrid vector and lexical retrieval engine, grounded answer synthesis, claim-level factual grounding evaluation, automatic citation extraction, conversational greeting intent routing, and full end-to-end multimodal verification across real uploaded PDFs and image documents.
+* **OpenCode Task**: Milestone 3 & 4 — Self-Correcting Execution Engine, Grounding Evaluator, Multimodal Textract OCR, and Interactive Chat Workspace.
+* **Files Modified / Created**:
+  * `backend/app/retrieval/vector_search.py` (cosine similarity, BM25 term overlap, adaptive weighting)
+  * `backend/app/rag/generator.py` (Amazon Bedrock Converse integration with extractive grounded fallback)
+  * `backend/app/evaluation/grounding.py` (claim decomposition, overlap scoring, grounding coverage thresholding)
+  * `backend/app/citations/generator.py` (chunk-level citation extraction and provenance matching)
+  * `backend/app/rag/orchestrator.py` (self-correction re-retrieval loop, conversational intent routing, CLI entrypoint)
+  * `backend/app/api/v1/query.py` (`POST /api/v1/query` endpoint with full audit trace)
+  * `backend/app/api/v1/metrics.py` (`GET /api/v1/metrics` live dashboard telemetry aggregator)
+  * `backend/app/api/v1/router.py` (registered query and metrics routers)
+  * `backend/tests/test_query_rag.py` (unit and integration tests for retrieval, citations, grounding, and query API)
+  * `frontend/src/types/index.ts` (extended types for citations, claims, and retrieval traces)
+  * `frontend/src/services/api.ts` (query execution and metric polling client methods)
+  * `frontend/src/pages/AskAegisPage.tsx` (real-time chat stream, citation detail modal, retrieval trace inspection, suggestion chips)
+* **AWS Services Involved**:
+  * Amazon S3 (raw document storage and chunk JSON persistence)
+  * Amazon DynamoDB (document lifecycle state machine and query telemetry)
+  * Amazon Bedrock (Titan Text Embeddings v2 and Nova LLM generation)
+  * Amazon Textract (live OCR extraction of uploaded images and structured layout text)
+* **Commands Executed**:
+  * `python -m pytest backend/tests -v` (16 tests passed)
+  * `npm run typecheck` (passed with 0 errors)
+  * `python backend/app/rag/orchestrator.py` (verified direct CLI execution)
+* **Tests**:
+  * Total 16 backend unit and integration tests executed: 16 passed, 0 failed.
+  * Live multimodal ingestion test with `id.png` and `Student Final Result Report.pdf` executed: passed.
+* **Result**:
+  * Full end-to-end RAG pipeline operational: document ingestion → chunking → embedding → hybrid search → grounded synthesis → claim verification → provenance citation.
+  * Conversational greeting router handles user greetings (`hi`, `hello`, etc.) and system overview queries seamlessly.
+  * Frontend Ask Aegis workspace provides interactive suggestion chips, citation inspect drawers, and retrieval trace debugging.
+

@@ -10,10 +10,14 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 
 try:
-    import fitz  # PyMuPDF
+    import pymupdf as fitz  # PyMuPDF
     HAS_PYMUPDF = True
 except ImportError:
-    HAS_PYMUPDF = False
+    try:
+        import fitz
+        HAS_PYMUPDF = True
+    except ImportError:
+        HAS_PYMUPDF = False
 
 try:
     import pypdf
@@ -131,14 +135,33 @@ class DocumentExtractor:
         )
 
     def _extract_image(self, document_id: str, filename: str, content: bytes, file_type: str) -> ExtractedDocument:
-        # Fallback OCR / basic image metadata representation for MVP
-        logger.info(f"Extracting image document {filename}")
+        """
+        Extract text from images using Amazon Textract OCR.
+        """
+        logger.info(f"Extracting image document {filename} using Amazon Textract")
+        extracted_text = ""
+        try:
+            import boto3
+            textract = boto3.client("textract", region_name="ap-south-1")
+            response = textract.detect_document_text(Document={"Bytes": content})
+            lines = [
+                item["Text"]
+                for item in response.get("Blocks", [])
+                if item.get("BlockType") == "LINE"
+            ]
+            extracted_text = "\n".join(lines)
+            logger.info(f"Amazon Textract successfully extracted {len(lines)} lines from {filename}")
+        except Exception as e:
+            logger.warning(f"Amazon Textract extraction fallback for {filename}: {e}")
+            extracted_text = f"[Image Document: {filename}]"
+
+        headings = self._identify_headings(extracted_text)
         pages = [
             ExtractedPage(
                 page_number=1,
-                text=f"[Image Document: {filename}]",
-                headings=[],
-                char_count=len(filename),
+                text=extracted_text,
+                headings=headings,
+                char_count=len(extracted_text),
             )
         ]
         return ExtractedDocument(
@@ -147,7 +170,7 @@ class DocumentExtractor:
             file_type=file_type,
             total_pages=1,
             pages=pages,
-            metadata={"parser": "image-ocr"},
+            metadata={"parser": "amazon-textract"},
         )
 
     def _identify_headings(self, text: str) -> List[str]:

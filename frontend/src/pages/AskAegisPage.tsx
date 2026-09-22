@@ -7,8 +7,10 @@ import {
   ChevronRight,
   Sparkles,
   X,
+  RefreshCw,
 } from 'lucide-react';
 import { Citation, ClaimVerification, RetrievalTrace } from '../types';
+import { sendQuery } from '../services/api';
 
 interface Message {
   id: string;
@@ -23,6 +25,7 @@ interface Message {
 
 export const AskAegisPage: React.FC = () => {
   const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -35,20 +38,46 @@ export const AskAegisPage: React.FC = () => {
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
   const [activeTrace, setActiveTrace] = useState<RetrievalTrace | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || loading) return;
 
-    // Add user message
+    const userText = query.trim();
     const userMsg: Message = {
       id: String(Date.now()),
       role: 'user',
-      content: query,
+      content: userText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setQuery('');
+    setLoading(true);
+
+    try {
+      const res = await sendQuery(userText);
+      const assistantMsg: Message = {
+        id: res.query_id || String(Date.now() + 1),
+        role: 'assistant',
+        content: res.answer,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        citations: res.citations,
+        groundingCoverage: res.grounding_coverage,
+        claims: res.claims,
+        trace: res.retrieval_trace,
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (err: any) {
+      const errorMsg: Message = {
+        id: String(Date.now() + 1),
+        role: 'assistant',
+        content: `I encountered an issue executing this query: ${err.message || 'Service unavailable'}. Please verify that your documents have been extracted and indexed.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -118,7 +147,7 @@ export const AskAegisPage: React.FC = () => {
                     {msg.trace && (
                       <button
                         onClick={() => setActiveTrace(msg.trace || null)}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium inline-flex items-center space-x-1"
+                        className="text-xs text-blue-600 hover:text-blue-700 font-medium inline-flex items-center space-x-1 cursor-pointer"
                       >
                         <span>How Aegis reached this answer</span>
                         <ChevronRight className="w-3 h-3" />
@@ -137,7 +166,7 @@ export const AskAegisPage: React.FC = () => {
                           <button
                             key={i}
                             onClick={() => setSelectedCitation(cite)}
-                            className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white border border-slate-200 hover:border-blue-300 text-slate-700 transition-colors shadow-2xs"
+                            className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white border border-slate-200 hover:border-blue-300 text-slate-700 transition-colors shadow-2xs cursor-pointer"
                           >
                             <FileText className="w-3 h-3 text-blue-600" />
                             <span>{cite.filename}</span>
@@ -156,6 +185,16 @@ export const AskAegisPage: React.FC = () => {
             </div>
           </div>
         ))}
+
+        {/* Loading Bubble */}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 max-w-md flex items-center space-x-3 text-xs text-slate-600">
+              <RefreshCw className="w-4 h-4 animate-spin text-blue-600 shrink-0" />
+              <span>Retrieving evidence, evaluating claims & verifying grounding with Bedrock...</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Query Input Bar */}
@@ -163,15 +202,16 @@ export const AskAegisPage: React.FC = () => {
         <input
           type="text"
           value={query}
+          disabled={loading}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Ask a question against your uploaded documents..."
-          className="w-full bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-3.5 pr-24 text-sm text-slate-900 placeholder-slate-400 shadow-2xs outline-none transition-all"
+          className="w-full bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-3.5 pr-24 text-sm text-slate-900 placeholder-slate-400 shadow-2xs outline-none transition-all disabled:bg-slate-50"
         />
         <div className="absolute right-2 top-2">
           <button
             type="submit"
-            disabled={!query.trim()}
-            className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white shadow-2xs transition-colors"
+            disabled={!query.trim() || loading}
+            className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white shadow-2xs transition-colors cursor-pointer"
           >
             <span>Ask</span>
             <Send className="w-3 h-3" />
@@ -179,13 +219,33 @@ export const AskAegisPage: React.FC = () => {
         </div>
       </form>
 
+      {/* Suggested Prompt Chips */}
+      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+        <span className="text-2xs font-medium text-slate-400">Suggested queries:</span>
+        {[
+          'What does Section 1 Data Verification state about claims?',
+          'What is Aegis and how does it prevent hallucinations?',
+          'Who are you and what can you do?',
+        ].map((prompt, idx) => (
+          <button
+            key={idx}
+            type="button"
+            disabled={loading}
+            onClick={() => setQuery(prompt)}
+            className="text-xs bg-slate-100 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
+
       {/* Citation Detail Modal */}
       {selectedCitation && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-2xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-xl relative animate-in fade-in zoom-in-95 duration-150">
             <button
               onClick={() => setSelectedCitation(null)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-md"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-md cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -198,6 +258,7 @@ export const AskAegisPage: React.FC = () => {
             </h3>
             <div className="flex items-center space-x-3 text-xs text-slate-500 mb-4">
               {selectedCitation.page && <span>Page {selectedCitation.page}</span>}
+              {selectedCitation.section && <span>Section: {selectedCitation.section}</span>}
               <span>Relevance: {(selectedCitation.relevance_score * 100).toFixed(1)}%</span>
               <span className="font-mono text-2xs text-slate-400">
                 Chunk: {selectedCitation.chunk_id.slice(0, 8)}...
@@ -216,7 +277,7 @@ export const AskAegisPage: React.FC = () => {
           <div className="bg-white rounded-2xl border border-slate-200 max-w-2xl w-full p-6 shadow-xl relative max-h-[85vh] overflow-y-auto">
             <button
               onClick={() => setActiveTrace(null)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-md"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-md cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -262,6 +323,27 @@ export const AskAegisPage: React.FC = () => {
                   ? `Triggered (${activeTrace.iterations} iterations)`
                   : 'Not required (First-pass grounding verified)'}
               </div>
+
+              {activeTrace.latency_ms && (
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 grid grid-cols-4 gap-2 text-center">
+                  <div>
+                    <span className="text-2xs text-slate-400 block">Retrieval</span>
+                    <span className="font-mono font-bold text-slate-800">{activeTrace.latency_ms.retrieval}ms</span>
+                  </div>
+                  <div>
+                    <span className="text-2xs text-slate-400 block">Generation</span>
+                    <span className="font-mono font-bold text-slate-800">{activeTrace.latency_ms.generation}ms</span>
+                  </div>
+                  <div>
+                    <span className="text-2xs text-slate-400 block">Verification</span>
+                    <span className="font-mono font-bold text-slate-800">{activeTrace.latency_ms.verification}ms</span>
+                  </div>
+                  <div>
+                    <span className="text-2xs text-slate-400 block">Total</span>
+                    <span className="font-mono font-bold text-blue-600">{activeTrace.latency_ms.total}ms</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

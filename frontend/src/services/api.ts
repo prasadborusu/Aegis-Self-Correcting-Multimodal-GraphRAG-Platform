@@ -96,3 +96,30 @@ export async function deleteDocument(documentId: string): Promise<void> {
     throw new Error(`Failed to delete document: ${res.statusText}`);
   }
 }
+
+export async function sendQuery(query: string, documentIds?: string[]) {
+  const res = await fetch(`${API_BASE}/api/v1/query`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      query,
+      document_ids: documentIds,
+    }),
+  });
+
+  if (!res.ok) {
+    let errorMsg = 'Failed to execute query';
+    try {
+      const err = await res.json();
+      if (err.detail) errorMsg = err.detail;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMsg);
+  }
+
+  return await res.json();
+}

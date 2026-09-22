@@ -107,3 +107,16 @@ export interface RetrievalTrace {
     total: number;
   };
 }
+
+export interface QueryResult {
+  query_id: string;
+  query: string;
+  answer: string;
+  citations: Citation[];
+  grounding_coverage: number;
+  total_claims: number;
+  supported_claims: number;
+  claims: ClaimVerification[];
+  retrieval_trace: RetrievalTrace;
+}
+
