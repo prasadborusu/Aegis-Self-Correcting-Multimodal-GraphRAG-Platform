@@ -77,6 +77,16 @@ $$\text{Document} \longrightarrow \text{Structure-Aware Extraction} \longrightar
 
 ---
 
+## 🎬 Demonstration Video & Walkthrough
+
+A high-definition video walkthrough showing live multi-pass self-correction, factual grounding, citation drawers, and trace modals is included directly in the repository:
+
+* 📽️ **Universal MP4 Video (720p HD, H.264)**: [`recordings/aegis_demo_walkthrough.mp4`](recordings/aegis_demo_walkthrough.mp4) (9.5 MB)
+* 🌐 **Web-Native WebM Video (720p HD, VP8)**: [`recordings/aegis_demo_walkthrough.webm`](recordings/aegis_demo_walkthrough.webm) (4.3 MB)
+* 📝 **Full Scene Timestamps & Transcription**: See [docs/DEMO_WALKTHROUGH.md](docs/DEMO_WALKTHROUGH.md)
+
+---
+
 ## AWS Services
 
 | AWS Service | Purpose in Aegis |
