@@ -101,14 +101,20 @@ $$\text{Document} \longrightarrow \text{Structure-Aware Extraction} \longrightar
 
 ---
 
-## Self-Correction Loop
+## Self-Correction Loop in Action
 
-When a query's grounding coverage is below the configured threshold (e.g. 75%):
-1. **Deficiency Analysis**: Aegis identifies which claims lack supporting evidence or where information gaps exist.
-2. **Query Reformulation**: Bedrock generates a targeted query rewrite designed to uncover the missing evidence.
-3. **Re-retrieval & Fusion**: Additional candidates are fetched from OpenSearch, deduplicated with previous evidence, and reranked.
-4. **Safety Ceiling**: The loop executes up to a strict maximum of **3 iterations**. If evidence remains insufficient, Aegis transparently reports:
-   > *"I couldn't find sufficient evidence in the uploaded sources to answer this confidently."*
+Unlike standard single-shot RAG pipelines, Aegis implements an autonomous, multi-pass verification loop:
+
+| Stage | Action | State Transition |
+| :--- | :--- | :--- |
+| **Pass 1: Initial Retrieval** | Vector and lexical search fetch top candidates. | Grounding Evaluated ($C_1$). If $C_1 \ge 0.75$, answer finalized. |
+| **Pass 1: Deficiency Detection**| If $C_1 < 0.75$ (e.g. cross-document project info missing), self-correction triggers. | Flag: `self_correction_triggered: true`. |
+| **Autonomous Reformulation** | Unsupported claims are extracted and synthesized into an expanded target query. | Query rewritten to target missing document chunks. |
+| **Pass 2: Augmented Retrieval**| Secondary retrieval executes, deduplicating with previous evidence. | Grounding Evaluated ($C_2 \ge 0.80$). Consensus reached. |
+| **Final Verification & Output**| Answer rendered with inline verified tags and dual-document citations. | `Self-Corrected (2 Passes)` badge displayed with full reasoning trace. |
+
+If evidence remains insufficient after 3 iterations, Aegis falls back gracefully rather than hallucinating:
+> *"I couldn't find sufficient evidence in the uploaded sources to answer this confidently."*
 
 ---
 
